@@ -1,13 +1,15 @@
 package com.huxq17.example.fragment;
 
+import android.app.Dialog;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.Toolbar;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-
 import com.andbase.tractor.utils.LogUtils;
 import com.huxq17.example.MainActivity;
 import com.huxq17.example.R;
@@ -17,7 +19,6 @@ import com.huxq17.example.bean.ContentBean;
 import com.huxq17.example.constants.Constants;
 import com.huxq17.example.presenter.MeiziPresenter;
 import com.huxq17.swipecardsview.SwipeCardsView;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,6 +33,7 @@ public class MeiziFragment extends UltraPagerFragment<ContentBean, MeiziPresente
     private MeiziAdapter adapter;
     private FloatingActionButton floatingActionButton;
     private int curIndex;
+    private Dialog mDialog;
 
     public MeiziFragment() {
     }
@@ -56,6 +58,20 @@ public class MeiziFragment extends UltraPagerFragment<ContentBean, MeiziPresente
     }
 
     /**
+     * 卡片向顶部飞出
+     */
+    public void doTopOut() {
+        swipeCardsView.slideCardOut(SwipeCardsView.SlideType.TOP);
+    }
+
+    /**
+     * 卡片向底部飞出
+     */
+    public void doBottomOut() {
+        swipeCardsView.slideCardOut(SwipeCardsView.SlideType.BOTTOM);
+    }
+
+    /**
      * 从头开始，重新浏览
      */
     public void doRetry() {
@@ -66,9 +82,8 @@ public class MeiziFragment extends UltraPagerFragment<ContentBean, MeiziPresente
         }
     }
 
-    @Nullable
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    @Nullable @Override public View onCreateView(LayoutInflater inflater, ViewGroup container,
+            Bundle savedInstanceState) {
         container = (ViewGroup) inflater.inflate(R.layout.fragment_meizi, container, false);
         Toolbar toolbar = (Toolbar) container.findViewById(R.id.toolbar);
         swipeCardsView = (SwipeCardsView) container.findViewById(R.id.swipCardsView);
@@ -80,14 +95,12 @@ public class MeiziFragment extends UltraPagerFragment<ContentBean, MeiziPresente
         getData();
         //设置滑动监听
         swipeCardsView.setCardsSlideListener(new SwipeCardsView.CardsSlideListener() {
-            @Override
-            public void onShow(int index) {
+            @Override public void onShow(int index) {
                 curIndex = index;
                 LogUtils.i("test showing index = " + index);
             }
 
-            @Override
-            public void onCardVanish(int index, SwipeCardsView.SlideType type) {
+            @Override public void onCardVanish(int index, SwipeCardsView.SlideType type) {
                 String orientation = "";
                 switch (type) {
                     case LEFT:
@@ -96,13 +109,46 @@ public class MeiziFragment extends UltraPagerFragment<ContentBean, MeiziPresente
                     case RIGHT:
                         orientation = "向右飞出";
                         break;
+                    case TOP:
+                        orientation = "向上飞出";
+                        break;
+                    case BOTTOM:
+                        orientation = "向下飞出";
+                        break;
                 }
-//                toast("test position = "+index+";卡片"+orientation);
+                //                toast("test position = "+index+";卡片"+orientation);
+            }
+
+            @Override public boolean interceptCardScroll(int index, SwipeCardsView.SlideType type) {
+                if (type == SwipeCardsView.SlideType.TOP
+                        || type == SwipeCardsView.SlideType.BOTTOM) {
+                    return true;
+                } else {
+                    return false;
+                }
             }
 
             @Override
-            public void onItemClick(View cardImageView, int index) {
-                toast("点击了 position=" + index);
+            public void onInterceptedCardScroll(int index, SwipeCardsView.SlideType type) {
+                mDialog = new AlertDialog.Builder(getActivity()).setMessage("确定投递？")
+                        .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                            @Override public void onClick(DialogInterface dialog, int which) {
+                                swipeCardsView.goOnIntercepted();
+                                dialog.dismiss();
+                            }
+                        })
+                        .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                            @Override public void onClick(DialogInterface dialog, int which) {
+                                swipeCardsView.goBackIntercepted();
+                                dialog.dismiss();
+                            }
+                        })
+                        .create();
+                mDialog.show();
+            }
+
+            @Override public void onItemClick(View cardImageView, int index) {
+                //toast("点击了 position=" + index);
             }
         });
         return container;
@@ -112,16 +158,14 @@ public class MeiziFragment extends UltraPagerFragment<ContentBean, MeiziPresente
         getData(Constants.CoverUrl + page, activity, this);
     }
 
-    @Override
-    public void dealDataResponse(List<ContentBean> bean, boolean success) {
+    @Override public void dealDataResponse(List<ContentBean> bean, boolean success) {
         if (bean != null) {
             mList = bean;
             show();
         }
     }
 
-    @Override
-    public void dealDataLoading(List<ContentBean> beans) {
+    @Override public void dealDataLoading(List<ContentBean> beans) {
         mList.addAll(beans);
         show();
     }
@@ -140,27 +184,30 @@ public class MeiziFragment extends UltraPagerFragment<ContentBean, MeiziPresente
         }
     }
 
-    @Override
-    public void stopRefresh() {
+    @Override public void stopRefresh() {
 
     }
 
-    @Override
-    public void dealRefreshDataFail(String msg) {
+    @Override public void dealRefreshDataFail(String msg) {
 
     }
 
-    @Override
-    public void dealLoadMoreDataFail(String msg) {
+    @Override public void dealLoadMoreDataFail(String msg) {
     }
 
-    @Override
-    public void dealAddFooter(List<ContentBean> beans) {
+    @Override public void dealAddFooter(List<ContentBean> beans) {
 
     }
 
-    @Override
-    public void dealPageSelected(int position) {
+    @Override public void dealPageSelected(int position) {
 
+    }
+
+    @Override public void onDestroy() {
+        super.onDestroy();
+        if (mDialog != null) {
+            mDialog.dismiss();
+            mDialog = null;
+        }
     }
 }

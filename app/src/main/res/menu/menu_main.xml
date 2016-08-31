@@ -13,6 +13,16 @@
         android:title="@string/action_right"
         app:showAsAction="never" />
     <item
+        android:id="@+id/action_top"
+        android:orderInCategory="100"
+        android:title="@string/action_top"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/action_bottom"
+        android:orderInCategory="100"
+        android:title="@string/action_bottom"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_retry"
         android:orderInCategory="100"
         android:title="@string/action_retry"
